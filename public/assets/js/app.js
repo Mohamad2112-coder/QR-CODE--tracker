@@ -1,0 +1,230 @@
+// Multi-Tenant QR Order Pager Client App JavaScript
+
+// 1. Audio Notification Synthesizer (Zero external dependencies)
+let soundAudioContext = null;
+
+class SoundNotifier {
+    static readyAudio = null;
+
+    static createReadyAudio() {
+        const sampleRate = 16000;
+        const duration = 1.45;
+        const sampleCount = Math.floor(sampleRate * duration);
+        const buffer = new ArrayBuffer(44 + sampleCount * 2);
+        const view = new DataView(buffer);
+        const writeText = (offset, text) => {
+            for (let i = 0; i < text.length; i++) {
+                view.setUint8(offset + i, text.charCodeAt(i));
+            }
+        };
+
+        writeText(0, 'RIFF');
+        view.setUint32(4, 36 + sampleCount * 2, true);
+        writeText(8, 'WAVE');
+        writeText(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        writeText(36, 'data');
+        view.setUint32(40, sampleCount * 2, true);
+
+        const notes = [
+            { start: 0.00, end: 0.28, frequency: 659.25 },
+            { start: 0.36, end: 0.64, frequency: 783.99 },
+            { start: 0.72, end: 1.00, frequency: 1046.50 },
+            { start: 1.08, end: 1.40, frequency: 783.99 }
+        ];
+
+        for (let i = 0; i < sampleCount; i++) {
+            const time = i / sampleRate;
+            const note = notes.find(item => time >= item.start && time < item.end);
+            let sample = 0;
+            if (note) {
+                const noteTime = time - note.start;
+                const noteDuration = note.end - note.start;
+                const envelope = Math.min(1, noteTime / 0.015, (noteDuration - noteTime) / 0.05);
+                sample = Math.sin(2 * Math.PI * note.frequency * noteTime) * Math.max(0, envelope) * 0.8;
+            }
+            view.setInt16(44 + i * 2, Math.round(sample * 32767), true);
+        }
+
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        for (let i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        const audio = new Audio(`data:audio/wav;base64,${window.btoa(binary)}`);
+        audio.preload = 'auto';
+        audio.volume = 1;
+        audio.playsInline = true;
+        return audio;
+    }
+
+    static async enable() {
+        try {
+            return await this.playChime('ready');
+        } catch (e) {
+            console.warn('Audio test could not be played:', e);
+            return false;
+        }
+    }
+
+    static async playChime(type = 'ready') {
+        try {
+            if (type === 'ready') {
+                if (!this.readyAudio) {
+                    this.readyAudio = this.createReadyAudio();
+                }
+                this.readyAudio.pause();
+                this.readyAudio.currentTime = 0;
+                await this.readyAudio.play();
+                return true;
+            }
+
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) {
+                return false;
+            }
+            const ctx = soundAudioContext || (soundAudioContext = new AudioContext());
+            if (ctx.state === 'suspended') {
+                await ctx.resume();
+            }
+
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            if (type === 'ready') {
+                // Happy uplifting 3-tone chime for Ready status
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.12); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.24); // G5
+                osc.frequency.setValueAtTime(1046.50, now + 0.36); // C6
+
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+
+                osc.start(now);
+                osc.stop(now + 0.9);
+            } else if (type === 'new_order') {
+                // Bell tone for kitchen incoming order
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, now); // A5
+                osc.frequency.setValueAtTime(1174.66, now + 0.15); // D6
+
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.4, now + 0.03);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+
+                osc.start(now);
+                osc.stop(now + 0.7);
+            }
+            return true;
+        } catch (e) {
+            console.warn('Audio playback prevented or unsupported:', e);
+            return false;
+        }
+    }
+}
+
+// 2. Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then((reg) => {
+            console.log('ServiceWorker registered:', reg.scope);
+        }).catch((err) => {
+            console.log('ServiceWorker registration error:', err);
+        });
+    });
+}
+
+// 3. Web Push API Client Helper
+class PushManagerClient {
+    static async getVapidPublicKey() {
+        const res = await fetch('/api/vapid-key');
+        const data = await res.json();
+        return data.public_key;
+    }
+
+    static urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    static async subscribeToOrder(orderToken) {
+        if (!window.isSecureContext) {
+            return { success: false, reason: 'insecure' };
+        }
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+            return { success: false, reason: 'unsupported' };
+        }
+
+        if (Notification.permission === 'denied') {
+            return { success: false, reason: 'denied' };
+        }
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            return { success: false, reason: 'denied' };
+        }
+
+        const vapidPublicKey = await this.getVapidPublicKey();
+        if (!vapidPublicKey) {
+            return { success: false, reason: 'failed' };
+        }
+        const convertedVapidKey = this.urlBase64ToUint8Array(vapidPublicKey);
+
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: convertedVapidKey
+        });
+
+        const subJson = subscription.toJSON();
+        const response = await fetch('/api/customer/push-subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: orderToken,
+                endpoint: subJson.endpoint,
+                p256dh: subJson.keys.p256dh,
+                auth: subJson.keys.auth
+            })
+        });
+
+        return response.ok
+            ? { success: true, reason: 'subscribed' }
+            : { success: false, reason: 'failed' };
+    }
+}
+
+// 4. Online / Offline Monitoring Indicator
+function updateNetworkStatus() {
+    const badges = document.querySelectorAll('.network-status-badge');
+    badges.forEach(badge => {
+        if (navigator.onLine) {
+            badge.className = 'badge badge-online network-status-badge';
+            badge.innerText = '● Cloud Online';
+        } else {
+            badge.className = 'badge badge-offline network-status-badge';
+            badge.innerText = '▲ Offline Mode (Local)';
+        }
+    });
+}
+window.addEventListener('online', updateNetworkStatus);
+window.addEventListener('offline', updateNetworkStatus);
+document.addEventListener('DOMContentLoaded', updateNetworkStatus);

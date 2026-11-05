@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+vendor/
+storage/*
+!storage/.gitkeep
+local_hub/config.json
+node_modules/
+.idea/
+.vscode/
+*.log
+*.pem
+*.key
+*.crt

@@ -1,0 +1,9 @@
+{
+  "cloud_url": "http://localhost:8000",
+  "business_id": "replace-with-business-id",
+  "device_uuid": "replace-with-device-uuid",
+  "device_secret": "replace-with-device-secret",
+  "lan_port": 8080,
+  "sync_interval_seconds": 10,
+  "business_name": "Your Business"
+}
