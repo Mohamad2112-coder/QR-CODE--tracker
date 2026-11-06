@@ -72,7 +72,7 @@ The platform employs a hybrid architecture:
 ---
 
 ## 5. Offline Operation & Automatic Synchronization
-1. **Durable Local Storage**: The Local Business Hub uses SQLite (`local_hub/storage/hub_local.sqlite`).
+1. **Durable Local Storage**: The Local Business Hub uses SQLite (`backend/local_hub/storage/hub_local.sqlite`).
 2. **Unified Tokens**: Orders created offline are immediately given the exact same public HTTPS URL (`https://app.qrpager.io/track/{token}`) and printed on customer slips.
 3. **Graceful Customer Experience**: If a customer scans the QR code before the Local Hub has synced with the cloud, the customer tracking screen displays a friendly message: *"Order Being Registered — placed at the counter and synchronizing"*, and auto-polls every 5 seconds until cloud sync completes.
 4. **Idempotency Keys**: Offline orders are assigned unique idempotency keys (`idempotency_key = "hub_ord_" + UUID`). If a network timeout occurs and a sync batch is resent, the cloud engine detects duplicate keys and safely skips duplicate insertions.

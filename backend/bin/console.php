@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use App\Core\Config;
 use App\Core\Database;
 use App\Services\BackupService;
 use App\Services\NotificationService;
@@ -19,10 +19,11 @@ echo "=========================================================\n";
 switch ($command) {
     case 'migrate':
         echo "Executing database migrations...\n";
-        $dbConfig = Config::load('database');
-        $dsn = "mysql:host={$dbConfig['host']};port={$dbConfig['port']};dbname={$dbConfig['database']};charset={$dbConfig['charset']}";
-        $pdo = new PDO($dsn, $dbConfig['username'], $dbConfig['password'], $dbConfig['options']);
+        $pdo = Database::getConnection();
         $sql = file_get_contents(__DIR__ . '/../database/schema.sql');
+        if ($sql === false) {
+            throw new RuntimeException('Unable to read the MySQL database schema.');
+        }
         $pdo->exec($sql);
         echo "Database schema migrated successfully!\n";
         break;
@@ -78,10 +79,7 @@ switch ($command) {
     case 'seed':
         echo "Seeding database with initial platform & tenant data...\n";
         require_once __DIR__ . '/../database/seed.php';
-        $dbConfig = Config::load('database');
-        $dsn = "mysql:host={$dbConfig['host']};port={$dbConfig['port']};dbname={$dbConfig['database']};charset={$dbConfig['charset']}";
-        $pdo = new PDO($dsn, $dbConfig['username'], $dbConfig['password'], $dbConfig['options']);
-        seedDatabase($pdo);
+        seedDatabase(Database::getConnection());
         break;
 
     case 'generate-vapid':

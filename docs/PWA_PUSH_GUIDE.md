@@ -34,9 +34,9 @@ Web Push requires the tracking page to be served from a secure origin (HTTPS, or
 ## 4. VAPID Keypair Generation & Configuration
 To generate your own VAPID cryptographic keys:
 ```bash
-php bin/console.php generate-vapid
+php backend/bin/console.php generate-vapid
 ```
-Add the output keys to `config/vapid.php` or your environment variables:
+Add the output keys to `backend/config/vapid.php` or your environment variables:
 - `VAPID_PUBLIC_KEY`
 - `VAPID_PRIVATE_KEY`
 - `VAPID_SUBJECT` (e.g. `mailto:support@yourdomain.com`)

@@ -2,7 +2,8 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../../backend/bootstrap.php';
+require_once __DIR__ . '/../../backend/vendor/autoload.php';
 
 use App\Core\Request;
 use App\Core\Response;

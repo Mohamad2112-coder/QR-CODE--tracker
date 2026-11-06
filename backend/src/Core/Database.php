@@ -15,6 +15,10 @@ class Database
     {
         if (self::$instance === null) {
             $config = Config::load('database');
+            if ($config['driver'] !== 'mysql') {
+                throw new \RuntimeException('This application currently supports MySQL only.');
+            }
+
             $dsn = sprintf(
                 'mysql:host=%s;port=%d;dbname=%s;charset=%s',
                 $config['host'],

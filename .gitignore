@@ -2,9 +2,9 @@
 .env.*
 !.env.example
 vendor/
-storage/*
-!storage/.gitkeep
-local_hub/config.json
+backend/storage/*
+!backend/storage/.gitkeep
+backend/local_hub/config.json
 node_modules/
 .idea/
 .vscode/

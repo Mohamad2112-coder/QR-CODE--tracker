@@ -16,7 +16,7 @@ It allows Cashiers and Kitchen staff to continue creating orders, printing custo
 
 ## 3. Configuration
 
-In `local_hub/config.json`:
+In `backend/local_hub/config.json`:
 ```json
 {
   "cloud_url": "https://app.yourdomain.com",
@@ -36,7 +36,7 @@ In `local_hub/config.json`:
 ## 4. Starting the Local Hub
 
 ### On Windows:
-Double-click `local_hub/run_hub.bat` or run in terminal:
+Double-click `backend/local_hub/run_hub.bat` or run in terminal:
 ```cmd
 cd local_hub
 run_hub.bat
@@ -61,6 +61,6 @@ php hub_sync_worker.php
    ```
    [14:02:10] Cloud offline / unreachable. Local Hub operating autonomously.
    ```
-3. **Queueing**: Any orders created on the LAN are stored with `sync_state = 'pending_sync'` in `local_hub/storage/hub_local.sqlite`.
+3. **Queueing**: Any orders created on the LAN are stored with `sync_state = 'pending_sync'` in `backend/local_hub/storage/hub_local.sqlite`.
 4. **Automatic Reconnection & Batch Upload**: When internet connectivity returns, the sync worker bundles all pending orders and status updates into an idempotent batch and POSTs to `/api/hub/sync`.
 5. **Conflict Resolution**: Stale offline status transitions are automatically compared against cloud status rank. The cloud state is preserved if it has already progressed further.

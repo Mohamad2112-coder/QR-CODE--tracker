@@ -1,5 +1,6 @@
 -- Multi-Tenant QR Order Pager SaaS Platform Schema
 -- MySQL 8.0+ / MariaDB 10.4+ compatible
+-- For Supabase/PostgreSQL, use schema.supabase.sql instead.
 
 SET FOREIGN_KEY_CHECKS = 0;
 

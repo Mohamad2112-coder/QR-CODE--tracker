@@ -11,7 +11,7 @@ class View
         // Extract parameters into local scope
         extract($data, EXTR_SKIP);
 
-        $viewFile = dirname(__DIR__, 2) . "/views/{$view}.php";
+        $viewFile = dirname(__DIR__, 3) . "/frontend/views/{$view}.php";
         if (!file_exists($viewFile)) {
             throw new \RuntimeException("View file not found: {$view}");
         }
@@ -34,7 +34,7 @@ class View
             return $content;
         }
 
-        $layoutFile = dirname(__DIR__, 2) . "/views/layouts/{$layout}.php";
+        $layoutFile = dirname(__DIR__, 3) . "/frontend/views/layouts/{$layout}.php";
         if (!file_exists($layoutFile)) {
             return $content;
         }
