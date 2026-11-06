@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "framework": "other",
+  "framework": "node",
   "functions": {
     "public/index.php": { "runtime": "vercel-php@0.7.2" }
   },
