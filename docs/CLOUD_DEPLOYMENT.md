@@ -54,6 +54,8 @@ use Aiven, set `DB_CONNECTION=mysql` and copy the host, port, database, and
 username from the Aiven service connection details. Rotate any password that
 has been shared, then put the replacement in `DB_PASSWORD` (quote it if it
 contains spaces or `#`).
+Set `SESSION_DRIVER=database` in Vercel so login and CSRF sessions persist
+between serverless requests. Local development can keep `SESSION_DRIVER=file`.
 
 Download the service CA certificate from Aiven. On Vercel, add the complete PEM
 certificate as the `DB_SSL_CA_CONTENT` environment variable in Project Settings

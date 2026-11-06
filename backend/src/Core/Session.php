@@ -21,7 +21,11 @@ class Session
         }
 
         $lifetime = (int)Config::get('app.session_lifetime', 86400);
-        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+        $forwardedProto = strtolower(trim(explode(',', $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')[0]));
+        $isHttps = getenv('VERCEL') === '1'
+            || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)
+            || $forwardedProto === 'https';
 
         session_set_cookie_params([
             'lifetime' => $lifetime,
@@ -32,6 +36,14 @@ class Session
             'samesite' => 'Lax'
         ]);
 
+        $sessionDriver = getenv('SESSION_DRIVER') ?: (getenv('VERCEL') === '1' ? 'database' : 'file');
+        if ($sessionDriver === 'database') {
+            session_set_save_handler(new DatabaseSessionHandler(Database::getConnection()), true);
+        } elseif ($sessionDriver !== 'file') {
+            throw new \RuntimeException('SESSION_DRIVER must be either "file" or "database".');
+        }
+
+        ini_set('session.gc_maxlifetime', (string)$lifetime);
         session_start();
         self::$started = true;
     }
