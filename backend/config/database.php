@@ -10,12 +10,31 @@ $options = [
 
 $host = getenv('DB_HOST') ?: '127.0.0.1';
 $sslCa = getenv('DB_SSL_CA') ?: '';
-if ($sslCa === '' && !in_array($host, ['127.0.0.1', 'localhost', '::1'], true)) {
-    throw new RuntimeException('Set DB_SSL_CA to the database provider CA certificate for remote MySQL connections.');
+$sslCaContent = getenv('DB_SSL_CA_CONTENT') ?: '';
+$isRemote = !in_array($host, ['127.0.0.1', 'localhost', '::1'], true);
+
+if ($sslCaContent !== '') {
+    if (openssl_x509_read($sslCaContent) === false) {
+        throw new RuntimeException('DB_SSL_CA_CONTENT must contain a valid PEM CA certificate.');
+    }
+
+    $sslCa = sys_get_temp_dir() . DIRECTORY_SEPARATOR
+        . 'qr-pager-db-ca-' . hash('sha256', $sslCaContent) . '.pem';
+    if (!is_file($sslCa) || file_get_contents($sslCa) !== $sslCaContent) {
+        $bytesWritten = file_put_contents($sslCa, $sslCaContent, LOCK_EX);
+        if ($bytesWritten !== strlen($sslCaContent)) {
+            throw new RuntimeException('Unable to write the database CA certificate to temporary storage.');
+        }
+        chmod($sslCa, 0600);
+    }
+} elseif ($sslCa === '' && $isRemote) {
+    throw new RuntimeException(
+        'Set DB_SSL_CA_CONTENT to the provider PEM certificate in Vercel, or DB_SSL_CA to a local certificate file.'
+    );
 }
 
 if ($sslCa !== '') {
-    if (!preg_match('/^(?:[A-Za-z]:[\\\\\/]|\\\\\\\\|\/)/', $sslCa)) {
+    if ($sslCaContent === '' && !preg_match('/^(?:[A-Za-z]:[\\\\\/]|\\\\\\\\|\/)/', $sslCa)) {
         $sslCa = dirname(__DIR__) . DIRECTORY_SEPARATOR . $sslCa;
     }
 
