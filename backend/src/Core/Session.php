@@ -8,6 +8,11 @@ class Session
 {
     private static bool $started = false;
 
+    private static function isCliWithoutWebRuntime(): bool
+    {
+        return php_sapi_name() === 'cli' && getenv('VERCEL') !== '1';
+    }
+
     public static function start(): void
     {
         if (self::$started || session_status() === PHP_SESSION_ACTIVE) {
@@ -15,7 +20,7 @@ class Session
             return;
         }
 
-        if (php_sapi_name() === 'cli') {
+        if (self::isCliWithoutWebRuntime()) {
             self::$started = true;
             return;
         }
@@ -76,7 +81,7 @@ class Session
     {
         self::start();
         $_SESSION = [];
-        if (php_sapi_name() !== 'cli' && ini_get("session.use_cookies")) {
+        if (!self::isCliWithoutWebRuntime() && ini_get("session.use_cookies")) {
             $params = session_get_cookie_params();
             setcookie(session_name(), '', time() - 42000,
                 $params["path"], $params["domain"],
@@ -90,7 +95,7 @@ class Session
     public static function regenerate(): void
     {
         self::start();
-        if (php_sapi_name() !== 'cli' && session_status() === PHP_SESSION_ACTIVE) {
+        if (!self::isCliWithoutWebRuntime() && session_status() === PHP_SESSION_ACTIVE) {
             session_regenerate_id(true);
         }
     }
